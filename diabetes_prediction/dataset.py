@@ -3,26 +3,32 @@ from pathlib import Path
 from loguru import logger
 from tqdm import tqdm
 import typer
-
+import kagglehub
 from diabetes_prediction.config import PROCESSED_DATA_DIR, RAW_DATA_DIR
 
 app = typer.Typer()
 
 
 @app.command()
-def main(
-    # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    input_path: Path = RAW_DATA_DIR / "dataset.csv",
-    output_path: Path = PROCESSED_DATA_DIR / "dataset.csv",
-    # ----------------------------------------------
-):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
-    logger.info("Processing dataset...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
-    logger.success("Processing dataset complete.")
-    # -----------------------------------------
+def download_dataset():
+    logger.info("Downloading Pima Indians Diabetes dataset from Kaggle...")
+
+    # Download the dataset using kagglehub
+    dataset_path = kagglehub.dataset_download("uciml/pima-indians-diabetes-database")
+
+    # Source file path
+    source_file = Path(dataset_path) / "diabetes.csv"
+    destination_file = RAW_DATA_DIR / "diabetes.csv"
+
+    # Ensure the raw data directory exists
+    RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Copy the file to the raw data directory
+    if source_file.exists():
+        destination_file.write_bytes(source_file.read_bytes())
+        logger.success(f"Dataset downloaded to {destination_file}")
+    else:
+        logger.error("Failed to download the dataset.")
 
 
 if __name__ == "__main__":
