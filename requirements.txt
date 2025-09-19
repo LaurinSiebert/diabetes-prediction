@@ -1,15 +1,18 @@
 ipython
 jupyterlab
-loguru
+loguru~=0.7.3
 matplotlib
 notebook
 numpy
-pandas
+pandas~=2.2.3
 pip
-pytest
-python-dotenv
+pytest~=8.3.5
+python-dotenv~=1.1.1
 ruff
-scikit-learn
-tqdm
-typer
+scikit-learn~=1.5.2
+tqdm~=4.66.5
+typer~=0.12.5
 -e .
+torch>=2.4.1
+diabetes_prediction~=0.0.1
+kagglehub~=0.3.12
