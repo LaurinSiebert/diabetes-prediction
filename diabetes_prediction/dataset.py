@@ -1,71 +1,90 @@
 import torch
-from torch.utils.data import DataLoader, TensorDataset
+import numpy as np
 import pandas as pd
+import diabetes_prediction.config as config
 from typing import Tuple
+from pathlib import Path
 from sklearn.model_selection import train_test_split
-from diabetes_prediction.config import PROCESSED_DATA_DIR, RAW_DATA_DIR, BATCH_SIZE, SEED
+from sklearn.preprocessing import StandardScaler
+from torch.utils.data import Dataset, DataLoader
 
+class DiabetesDataset(Dataset):
+    """Selfmade Dataset class to have the flexibility if needed."""
 
-def to_tensor_dataset(df: pd.DataFrame) -> TensorDataset:
-    """Convert a DataFrame to a TensorDataset."""
+    def __init__(
+            self,
+            data : np.array,
+            targets : np.array
+    ):
+        self.data = torch.tensor(data.astype(torch.float32))
+        self.targets = torch.tensor(targets.astype(torch.long))
 
-    X = df.drop(columns=["Outcome"]).values
-    y = df["Outcome"].values
-    return TensorDataset(
-        torch.tensor(X, dtype=torch.float32),
-        torch.tensor(y, dtype=torch.long)
-    )
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx], self.targets[idx]
 
 
 def get_dataloader(
-        batch_size: int = BATCH_SIZE,
-        seed : int = SEED
+        path: Path = config.RAW_DATA_DIR / 'diabetes.csv',
+        batch_size : int = config.BATCH_SIZE
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
-    """Create DataLoaders for training, validation and testing."""
+    """ Creates and returns dataloaders using a self defined dataloader class.
+
+    path : path to the source of the used data. specified in config.py
+    batch_size : number of items in each batch if possible. specified in config.py
+
+    return : Tuple of Dataloader objects for the train, test and validation sets
+
+    The data is split (70/15/15), and a StandardScaler is fit ONLY on
+    the training data to prevent data leakage.
+    """
 
     # Read the dataset
-    dataset_path = RAW_DATA_DIR / "diabetes.csv"
-    if not dataset_path.exists():
+    if not path.exists():
         raise FileNotFoundError(
-            f"Dataset not found at {dataset_path}. Please run dataset.py in command line first."
+            f"Dataset not found at {path}."
         )
+    data = pd.read_csv(path)
 
-    dataset = pd.read_csv(dataset_path)
+    # Drop target from data. Train_test_split takes the order X and y come in into account.
+    X = data.drop("Outcome", axis=1).values
+    y = data["Outcome"].values
 
-    # Split the dataset into features and target
-    rest, test = train_test_split(
-        dataset,
-        test_size=0.2,
-        stratify=dataset["Outcome"],
-        random_state=seed
+    # Split the data into train and a rest. Use stratify to keep a reasonable ratio of target values
+    X_train, X_temp, y_train, y_temp = train_test_split(
+        X,
+        y,
+        test_size=0.3,  #70 percent train set
+        stratify=y,
+        random_state=config.SEED
     )
 
-    train, val = train_test_split(
-        rest,
-        test_size=0.25,
-        stratify=rest["Outcome"],
-        random_state=seed
+    # Scale the data
+    scaler = StandardScaler()
+    scaler.fit(X_train)
+    X_train = scaler.transform(X_train)
+    X_temp = scaler.transform(X_temp)
+
+    # Split into val and test
+    X_test, X_val, y_test, y_val = train_test_split(
+        X_temp,
+        y_temp,
+        test_size=0.5,  # 15 percent train and 15 percent val set
+        stratify=y_temp,
+        random_state=config.SEED
     )
 
-    # Create TensorDatasets
-    train_dataset = to_tensor_dataset(train)
-    test_dataset = to_tensor_dataset(test)
-    val_dataset = to_tensor_dataset(val)
+    # Wrap it in DiabetesDatasets
+    train_ds = DiabetesDataset(X_train, y_train)
+    test_ds = DiabetesDataset(X_test, y_test)
+    val_ds = DiabetesDataset(X_val, y_val)
 
-    # Create DataLoaders
-    train_dataloader = DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        shuffle=True
-    )
-    test_dataloader = DataLoader(
-        test_dataset,
-        batch_size=batch_size,
-        shuffle=False)
-    val_dataloader = DataLoader(
-        val_dataset,
-        batch_size=batch_size,
-        shuffle=False
-    )
+    # Wrap those in DataLoaders
+    train_loader = DataLoader(train_ds, batch_size, shuffle=True)
+    test_loader = DataLoader(test_ds, batch_size, shuffle=False)
+    val_loader = DataLoader(val_ds, batch_size, shuffle=False)
 
-    return train_dataloader, test_dataloader, val_dataloader
+    return train_loader, test_loader, val_loader
+
