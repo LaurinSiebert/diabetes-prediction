@@ -25,7 +25,7 @@ BATCH_SIZE = 32
 SEED = 42
 EPOCHS = 100
 LEARNING_RATE = 1e-3
-HIDDEN_SIZE = 16
+HIDDEN_SIZE = 128
 
 # If tqdm is installed, configure loguru with tqdm.write
 # https://github.com/Delgan/loguru/issues/135

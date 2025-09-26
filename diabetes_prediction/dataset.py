@@ -16,8 +16,8 @@ class DiabetesDataset(Dataset):
             data : np.array,
             targets : np.array
     ):
-        self.data = torch.tensor(data.astype(torch.float32))
-        self.targets = torch.tensor(targets.astype(torch.long))
+        self.data = torch.tensor(data, dtype=torch.float32)
+        self.targets = torch.tensor(targets, dtype=torch.float32)
 
     def __len__(self):
         return len(self.data)
