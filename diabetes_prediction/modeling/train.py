@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import random
 import os
+from pathlib import Path
 from diabetes_prediction import config
 from diabetes_prediction.dataset import get_dataloader
 from diabetes_prediction.modeling.model import DiabetesModel
@@ -80,16 +81,24 @@ def evaluate(model, dataloader, criterion, device):
 
 
 
-def train():
-    """Training Loop"""
+def train(
+        data_path : Path = Path(config.RAW_DATA_DIR / "diabetes.csv")
+):
+    """
+    Training Loop
 
-    # Set the seed for reproducability
+    data_path : if any other data should be used than the raw data enter the path here.
+    """
+
+    # Set the seed for reproducibility
     set_seed()
 
     device = torch.device("cuda" if  torch.cuda.is_available() else "cpu")
 
     # Initialize the dataloader. path default is the raw data, batch_size default is specified in config.py
-    train_dl, test_dl, val_dl = get_dataloader()
+    if not data_path.exists():
+        raise FileNotFoundError(f"Please enter a valid file_path.")
+    train_dl, test_dl, val_dl = get_dataloader(data_path)
 
     # Initialize the model
     input_size = next(iter(train_dl))[0].shape[1]
@@ -169,4 +178,5 @@ def train():
 
 
 if __name__ == "__main__":
-    train()
+    processed_data_path = Path(config.PROCESSED_DATA_DIR / "diabetes_processed.csv")
+    train(processed_data_path)

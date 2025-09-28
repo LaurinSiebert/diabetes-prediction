@@ -4,7 +4,7 @@ class DiabetesModel(nn.Module):
     def __init__(
             self,
             input_size : int,
-            hidden_size : int = 16,
+            hidden_size : int = 128,
             output_size : int =1
     ):
         super().__init__()
